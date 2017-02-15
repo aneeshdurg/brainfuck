@@ -1,4 +1,5 @@
 import Data.HashMap.Strict as H (HashMap, empty, fromList, insert, lookup, union)
+import System.Environment
 
 type OpType = [Char] -> Int -> IO ([Char], Int)
 
@@ -7,8 +8,8 @@ ops = H.fromList [ ('>', incP)
                  , ('<', decP)
                  , ('+', inc )
                  , ('-', dec )
-                 --, (".", putc)
-                 --, (",", getc)
+                 , ('.', putc)
+                 , (',', getc)
                  --, ("[", jmpf)
                  --, ("]", jmpb)
                  ]
@@ -31,10 +32,23 @@ dec :: OpType
 dec mem idx = do
                  putStrLn "I"
                  return (take idx mem ++ pred (mem!!idx):[] ++ drop (idx+1) mem, idx)
-main = repl (concat $ take 10 $ repeat ['\0']) 0
+
+putc :: OpType
+putc mem idx = do
+                 putStrLn $ "p: "++(mem!!idx):[]
+                 return (mem, idx)
+getc :: OpType
+getc mem idx = do
+                 c <- getChar
+                 return (take idx mem ++ c:[] ++ drop (idx+1) mem, idx)
+
+main = do
+  args <- getArgs
+  let n = read (head args) :: Int
+  repl (concat $ repeat ['\0']) 0
 
 repl mem idx = do
-  print (mem, idx)
+  print (take (idx+1) mem, idx)
   c <- getChar
   if c/='\n' then do
     case H.lookup c ops of
