@@ -61,7 +61,7 @@ regenLoop x (l:ls) =
     '['  -> let (sub, rest) = regenLoop "[" $ tail ls
             in  regenLoop ((reverse sub) ++ x) rest
     ']' -> (reverse $ l:x, ls)
-
+    _   -> regenLoop (l:x) ls
 
 loopEval :: LoopType
 loopEval mem idx l = do
@@ -74,10 +74,10 @@ loopEval mem idx l = do
                          loopEvalHelp m i prev ('[':xs) = do 
                                                             let (newl, rest) = regenLoop "[" xs
                                                             if (m!!i) == '\0'
-                                                            then do
+                                                            then loopEvalHelp m i ((reverse newl) ++ prev) rest
+                                                            else do
                                                               (m', i') <- loopEvalHelp m i "[" $ tail newl
                                                               loopEvalHelp m' i' ((reverse newl) ++ prev) rest 
-                                                            else loopEvalHelp m i ((reverse newl) ++ prev) rest 
 
                          loopEvalHelp m i prev (x:xs)   = do 
                                                             let Just op = H.lookup x ops
@@ -90,11 +90,7 @@ jmpf :: OpType
 jmpf mem idx = do
                  l <- genLoop "["
                  putStrLn l
-                 if (mem!!idx) == '\0'
-                 then return (mem, idx)
-                 else do 
-                    (m', i') <- loopEval mem idx $ tail l
-                    return (m', i')
+                 loopEval mem idx l
 
 
 main = do
