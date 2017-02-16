@@ -1,6 +1,7 @@
 import Data.HashMap.Strict as H (HashMap, empty, fromList, insert, lookup, union)
 import System.Environment
 import System.IO
+import Data.Char (chr, ord)
 
 type OpType = [Char] -> Int -> Handle -> IO ([Char], Int)
 type LoopType = [Char] -> Int -> [Char] -> Handle -> IO ([Char], Int)
@@ -26,10 +27,16 @@ decP mem idx _ = do
 
 inc :: OpType
 inc mem idx _ = do
-                 return (take idx mem ++ succ (mem!!idx):[] ++ drop (idx+1) mem, idx)
+                 let n = mem!!idx
+                 if n == '\1114111'
+                   then return (take idx mem ++ '\0':[] ++ drop (idx+1) mem, idx)
+                   else return (take idx mem ++ (succ n):[] ++ drop (idx+1) mem, idx)
 dec :: OpType
 dec mem idx _ = do
-                 return (take idx mem ++ pred (mem!!idx):[] ++ drop (idx+1) mem, idx)
+                 let n = mem!!idx
+                 if n == '\0'
+                   then return (take idx mem ++ '\1114111':[] ++ drop (idx+1) mem, idx)
+                   else return (take idx mem ++ (pred n):[] ++ drop (idx + 1) mem, idx)
 
 putc :: OpType
 putc mem idx _ = do
