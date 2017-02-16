@@ -2,6 +2,7 @@ import Data.HashMap.Strict as H (HashMap, empty, fromList, insert, lookup, union
 import System.Environment
 
 type OpType = [Char] -> Int -> IO ([Char], Int)
+type LoopType = [Char] -> Int -> [Char] -> IO ([Char], Int)
 
 ops :: H.HashMap Char OpType
 ops = H.fromList [ ('>', incP)
@@ -10,7 +11,7 @@ ops = H.fromList [ ('>', incP)
                  , ('-', dec )
                  , ('.', putc)
                  , (',', getc)
-                 --, ("[", jmpf)
+                 , ('[', jmpf)
                  --, ("]", jmpb)
                  ]
 
@@ -41,6 +42,60 @@ getc :: OpType
 getc mem idx = do
                  c <- getChar
                  return (take idx mem ++ c:[] ++ drop (idx+1) mem, idx)
+
+genLoop :: String -> IO String
+genLoop x = do
+  c <- getChar
+  case c of 
+    '['  -> do
+              l <- genLoop "["
+              genLoop $ (reverse l) ++ x
+    ']' -> return $ reverse $ c:x
+    _   -> case H.lookup c ops of 
+      Just _ -> genLoop $ c:x
+      Nothing -> genLoop x
+
+regenLoop :: String -> String -> (String, String)
+regenLoop x (l:ls) =
+  case l of 
+    '['  -> let (sub, rest) = regenLoop "[" $ tail ls
+            in  regenLoop ((reverse sub) ++ x) rest
+    ']' -> (reverse $ l:x, ls)
+
+
+loopEval :: LoopType
+loopEval mem idx l = do
+                       loopEvalHelp mem idx [] l
+                       where
+                         loopEvalHelp m i prev []       = return (m, i)  
+                         loopEvalHelp m i prev (']':xs) = if (m!!i) /= '\0'
+                                                            then loopEvalHelp m i [] $ (reverse prev) ++ (']':xs)
+                                                            else loopEvalHelp m i (']':prev) xs
+                         loopEvalHelp m i prev ('[':xs) = do 
+                                                            let (newl, rest) = regenLoop "[" xs
+                                                            if (m!!i) == '\0'
+                                                            then do
+                                                              (m', i') <- loopEvalHelp m i "[" $ tail newl
+                                                              loopEvalHelp m' i' ((reverse newl) ++ prev) rest 
+                                                            else loopEvalHelp m i ((reverse newl) ++ prev) rest 
+
+                         loopEvalHelp m i prev (x:xs)   = do 
+                                                            let Just op = H.lookup x ops
+                                                            (m', i') <- op m i
+                                                            loopEvalHelp m' i' (x:prev) xs
+                                                      
+
+
+jmpf :: OpType
+jmpf mem idx = do
+                 l <- genLoop "["
+                 putStrLn l
+                 if (mem!!idx) == '\0'
+                 then return (mem, idx)
+                 else do 
+                    (m', i') <- loopEval mem idx $ tail l
+                    return (m', i')
+
 
 main = do
   args <- getArgs
