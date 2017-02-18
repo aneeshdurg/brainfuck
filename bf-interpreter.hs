@@ -106,13 +106,16 @@ main = do
 
 repl mem idx h = do
   --print (take (idx+1) mem, idx)
-  c <- hGetChar h
-  if c/='\n' then do
-    case H.lookup c ops of
-      Just op -> do
-        (mem', idx') <- op mem idx h 
-        repl mem' idx' h
-      _       -> repl mem idx h
-  else
-    repl mem idx h
+  do eof <- hIsEOF h
+     if eof then return ()
+     else do
+       c <- hGetChar h
+       if c/='\n' then do
+         case H.lookup c ops of
+           Just op -> do
+             (mem', idx') <- op mem idx h 
+             repl mem' idx' h
+           _       -> repl mem idx h
+       else
+         repl mem idx h
   
